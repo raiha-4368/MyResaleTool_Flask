@@ -1,0 +1,24 @@
+requirements.txtの作りかた
+①myenvのある場所で有効化する(activate)
+◇Windows
+ myenv\Scripts\activate
+◇Mac
+ source myenv/bin/activate
+
+②仮想環境で(プロンプトが環境名付きに変わる)
+コマンド
+1.インストール済みパッケージを一覧
+ pip freeze
+
+2.仮想環境のパッケージ情報を書き出して共有(requirements.txtファイルを作成する場所に移動してから実行)
+ pip freeze > requirements.txt
+
+
+3.プロジェクトの他のメンバーは、ソースコードをダウンロードした後、
+以下の手順で仮想環境に 同じパッケージをインストールします。このようにして、同一の環境をプロジェクトメンバー 全体で共有します。
+
+(env) $ pip install -r requirements.txt
+
+③仮想環境を無効化(deactivate)
+仮想環境化で以下コマンドを実行
+ deactivate

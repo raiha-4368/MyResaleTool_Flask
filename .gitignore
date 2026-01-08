@@ -1,0 +1,13 @@
+#git管理に含めないものを記述することで、git管理外とする
+
+# Python
+__pycache__/
+*.pyc
+
+# Virtual Environment
+myenv/
+venv/
+.env/
+
+# OS
+.DS_Store

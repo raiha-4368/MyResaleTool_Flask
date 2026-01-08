@@ -8,10 +8,20 @@ def  colc_profit(price, cost_price, shipping, fee_rate):
     return price - cost_price - shipping - (price * fee_rate)
 
 
+#売買時購入の判定処理を関数化
+def judge_profit(profit):
+    if profit < 0:
+        return "赤字です"
+    elif profit < 300: 
+        return "利益が少なめです。(要塞検討)"
+    else:
+        return "出品候補です"
+
 @app.route('/', methods=["GET","POST"])
 def index():
     result = None
     error = None
+    judge = None
 
     if request.method == "POST":
         name = request.form.get("name")
@@ -38,6 +48,8 @@ def index():
                     #ここで計算処理
                     profit  = int(colc_profit(price, cost_price, shipping, FEE_RATE))
                     profit_rate = int(profit / cost_price * 100) if cost_price > 0 else 0
+                    #赤字判定を関数で行う
+                    judge = judge_profit(profit)
                     result = {
                         "name": name,
                         "price": price,
@@ -45,6 +57,7 @@ def index():
                         "shipping": shipping,
                         "profit": profit,
                         "profit_rate": profit_rate,
+                        "judge": judge,
                         }
 
             except ValueError:
