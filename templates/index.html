@@ -2,17 +2,18 @@
 <html lang="jp">
 <head>
   <mata charaset="UTF-8">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css')}}" type="text/css">
   <title>売買利益計算ツール</title>
 </head>
 <body>
   <h1>売買利益計算ツール</h1>
 
   <form method="post">
-    <div>
+    <div id="name">
       商品名:
       <input type="text" name="name">
     </div>
-    <div>
+    <div class="price">
       売値:
       <input type="text" name="price">
     </div>

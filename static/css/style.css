@@ -1,0 +1,18 @@
+/* 要素によるスタイルの適用 */
+
+p {
+  color: red;
+} 
+
+h1 {
+  font-size: 100px;
+}
+
+/* idによるスタイルの適用 */
+#name {
+	color: blue;
+}
+/* classによるスタイルの適用 */
+.price {
+		color: purple;
+}
