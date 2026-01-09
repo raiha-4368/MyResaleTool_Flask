@@ -58,10 +58,9 @@ http://127.0.0.1:5000/
     app.run(debug=True)"  
 
 ## 実行イメージ(スクリーンショットを貼る予定)  
-docs/ScreenShot_01.png   
-docs/ScreenShot_02.png  
-docs/ScreenShot_03.png  
- ※自動で表示される想定
+![スクリーンショット01](docs/ScreenShot_01.png)   
+![スクリーンショット02](docs/ScreenShot_02.png)  
+![スクリーンショット03](docs/ScreenShot_03.png)  
 
  ## 今後の改善
 ・テストをpytestに置き換える（検討）
