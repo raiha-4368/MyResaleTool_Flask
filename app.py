@@ -4,7 +4,7 @@ app = Flask(__name__)
 
 FEE_RATE = 0.1 #メルカリ手数料10%を想定
 
-def  colc_profit(price, cost_price, shipping, fee_rate):
+def  calc_profit(price, cost_price, shipping, fee_rate):
     return price - cost_price - shipping - (price * fee_rate)
 
 
@@ -16,6 +16,35 @@ def judge_profit(profit):
         return "利益が少なめです。(要塞検討)"
     else:
         return "出品候補です"
+    
+# テスト用関数
+def test_judge():
+    print("=== test_judge(テスト開始) ===")
+    test_cases = [
+        (-100, "赤字です"),
+        (0, "利益が少なめです。(要塞検討)"),
+        (200, "利益が少なめです。(要塞検討)"),
+        (300, "出品候補です"),
+        (1000, "出品候補です"),
+        ]
+
+    for profit, expected in test_cases:
+        result = judge_profit(profit)
+        print(f"profit={profit} -> {result} (期待値: {expected})")
+
+        #想定外の結果が出た場合、NGと表示する
+        if result != expected:
+            print("   - > NG")
+
+    print("=== test_judge(テスト終了) ===")
+   
+    print("=== calc_profit(テスト開始) ===")
+    print(judge_profit(calc_profit(3000, 900, 600, 0.1)))
+    print(judge_profit(calc_profit(5000, 300, 500, FEE_RATE)))
+    print(judge_profit(calc_profit(2000, 3000, 300, FEE_RATE)))
+    print("=== calc_profit(テスト終了) ===")
+
+    return
 
 @app.route('/', methods=["GET","POST"])
 def index():
@@ -46,7 +75,7 @@ def index():
                     error = "価格が原価+送料を下回っています。"
                 else:
                     #ここで計算処理
-                    profit  = int(colc_profit(price, cost_price, shipping, FEE_RATE))
+                    profit  = int(calc_profit(price, cost_price, shipping, FEE_RATE))
                     profit_rate = int(profit / cost_price * 100) if cost_price > 0 else 0
                     #赤字判定を関数で行う
                     judge = judge_profit(profit)
@@ -76,6 +105,7 @@ def index():
     return render_template("index.html", result=result, error=error)
 
 if __name__ == "__main__":
+    test_judge()  # 確認したいときだけ有効化
     app.run(debug=True)
 
     #TODO:
