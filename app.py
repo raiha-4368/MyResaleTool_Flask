@@ -2,7 +2,17 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-FEE_RATE = 0.1 #メルカリ手数料10%を想定
+#現状は固定値
+#メルカリ手数料10%を想定
+FEE_RATE = 0.1 
+
+#エラーメッセージ定義
+ERROR_REQUIRED = "すべての項目を入力してください"
+ERROR_POSITYVE = "数値は正の値を入力してください"
+ERROR_TOO_LOW = "価格が原価+送料を下回っています"
+ERROR_NOT_NUMBER = "価格・原価・送料は数値で入力してください"
+
+
 
 def  calc_profit(price, cost_price, shipping, fee_rate):
     return price - cost_price - shipping - (price * fee_rate)
@@ -11,11 +21,11 @@ def  calc_profit(price, cost_price, shipping, fee_rate):
 #売買時購入の判定処理を関数化
 def judge_profit(profit):
     if profit < 0:
-        return "赤字です"
+        return "赤字です","red"
     elif profit < 300: 
-        return "利益が少なめです。(要塞検討)"
+        return "利益が少なめです。(要塞検討)", "yellow"
     else:
-        return "出品候補です"
+        return "出品候補です", "green"
     
 # テスト用関数
 def test_judge():
@@ -29,8 +39,8 @@ def test_judge():
         ]
 
     for profit, expected in test_cases:
-        result = judge_profit(profit)
-        print(f"profit={profit} -> {result} (期待値: {expected})")
+        result, judge_class = judge_profit(profit)
+        print(f"profit={profit} -> {result} color:{judge_class} (期待値: {expected})")
 
         #想定外の結果が出た場合、NGと表示する
         if result != expected:
@@ -51,6 +61,7 @@ def index():
     result = None
     error = None
     judge = None
+    judge_class = None
 
     if request.method == "POST":
         name = request.form.get("name")
@@ -60,7 +71,7 @@ def index():
 
         #空欄チェック
         if not name or not price or not cost_price or not shipping:
-            error = "すべての項目を入力してください"
+            error = ERROR_REQUIRED
         else:
             try:
                 #入力値チェック後、int型へ変更
@@ -70,15 +81,15 @@ def index():
 
                 #数値の正当性をチェック
                 if price <= 0 or cost_price <= 0 or shipping <= 0:
-                  error = "数値は正の値を入力してください"
+                  error = ERROR_POSITYVE
                 elif price < cost_price + shipping:
-                    error = "価格が原価+送料を下回っています。"
+                    error = ERROR_TOO_LOW
                 else:
                     #ここで計算処理
                     profit  = int(calc_profit(price, cost_price, shipping, FEE_RATE))
                     profit_rate = int(profit / cost_price * 100) if cost_price > 0 else 0
                     #赤字判定を関数で行う
-                    judge = judge_profit(profit)
+                    judge, judge_class = judge_profit(profit)
                     result = {
                         "name": name,
                         "price": price,
@@ -87,10 +98,11 @@ def index():
                         "profit": profit,
                         "profit_rate": profit_rate,
                         "judge": judge,
+                        "judge_class": judge_class,
                         }
 
             except ValueError:
-                error = "価格・原価・送料は数値で入力してください。"
+                error = ERROR_NOT_NUMBER
 
 
 
