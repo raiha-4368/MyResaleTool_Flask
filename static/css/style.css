@@ -1,8 +1,20 @@
 /* 要素によるスタイルの適用 */
+/* Flaskは この構造でしかCSSを配信しません */
 
-p {
-  color: red;
-} 
+body {
+  font-family: arial, sans-serif;
+  background-color: #f4f6f8;
+}
+
+/* classによるスタイルの適用 */
+/* 背景が薄グレーになり、白いカードが中央に出る */
+.container {
+  width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+}
 
 h1 {
   font-size: 100px;
@@ -10,9 +22,11 @@ h1 {
 
 /* idによるスタイルの適用 */
 #name {
-	color: blue;
+  /* テスト用なのでコメントアウト */
+	/*color: blue; */
 }
-/* classによるスタイルの適用 */
-.price {
-		color: purple;
+
+#price {
+    /* テスト用なのでコメントアウト */
+		/*color: purple;*/
 }

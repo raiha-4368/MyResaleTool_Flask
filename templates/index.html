@@ -1,37 +1,40 @@
 <!DOCTYPE html>
 <html lang="jp">
+
 <head>
   <mata charaset="UTF-8">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css')}}" type="text/css">
-  <title>売買利益計算ツール</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css')}}" type="text/css">
+    <title>売買利益計算ツール</title>
 </head>
+
 <body>
-  <h1>売買利益計算ツール</h1>
+  <div class="container">
+    <h1>売買利益計算ツール</h1>
 
-  <form method="post">
-    <div id="name">
-      商品名:
-      <input type="text" name="name">
-    </div>
-    <div class="price">
-      売値:
-      <input type="text" name="price">
-    </div>
-    <div>
-      原価:
-      <input type="text" name="cost_price">
-    </div>
-    <div>
-      送料:
-      <input type="text" name="shipping">
-    </div>
+    <form method="post">
+      <div id="name">
+        商品名:
+        <input type="text" name="name">
+      </div>
+      <div id="price">
+        売値:
+        <input type="text" name="price">
+      </div>
+      <div id="cost_price">
+        原価:
+        <input type="text" name="cost_price">
+      </div>
+      <div id="shipping">
+        送料:
+        <input type="text" name="shipping">
+      </div>
 
-    <button type="submit">計算する</button>
-  </form>
-  {% if error %}
+      <button type="submit">計算する</button>
+    </form>
+    {% if error %}
     <p style="color:red">{{ error }}</p>
-  {% endif %}
-  {% if result %}
+    {% endif %}
+    {% if result %}
     <h2>計算結果</h2>
     <p>商品名:{{ result.name}}</p>
     <p>利益:{{ result.profit}} 円</p>
@@ -39,6 +42,8 @@
     <p>判定:
       <font color="red">{{ result.judge }}</font>
     </p>
-  {% endif %}
+    {% endif %}
+  </div>
 </body>
+
 </html>
