@@ -9,5 +9,8 @@ myenv/
 venv/
 .env/
 
+# output
+output/
+
 # OS
 .DS_Store

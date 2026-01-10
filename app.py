@@ -1,4 +1,7 @@
+import os
+import csv
 from flask import Flask, render_template, request
+
 
 app = Flask(__name__)
 
@@ -15,7 +18,32 @@ ERROR_NOT_NUMBER = "価格・原価・送料は数値で入力してください
 
 
 def  calc_profit(price, cost_price, shipping, fee_rate):
+    """"docstring
+        TODO プログラムの解説を書く
+
+    """
     return price - cost_price - shipping - (price * fee_rate)
+
+#csvファイルへの書き込みを行う関数
+def export_result_csv(data: dict):
+  #outputディレクトリがなければ作成
+  os.makedirs("output", exist_ok=True)
+ 
+  #ファイル名を固定とする場合の処理
+  filename = "output/output.csv"
+
+  #新規書き込みw,追記モードaで使い分け
+  with open(filename, mode="a", newline="", encoding="utf-8") as f:
+    write = csv.DictWriter(f, fieldnames=data.keys())
+    #見出し行を付ける処理
+    if os.path.getsize(filename) == 0:
+      write.writeheader()
+    #現在ファイル名を固定としているため、csvのカラムを記述する処理はコメントアウト
+    #write.writeheader()
+    write.writerow(data)
+  print(f"CSV出力完了:{filename}")
+  return
+
 
 
 #売買時購入の判定処理を関数化
@@ -100,6 +128,8 @@ def index():
                         "judge": judge,
                         "judge_class": judge_class,
                         }
+                    #csvファイル書き込み
+                    export_result_csv(result)
 
             except ValueError:
                 error = ERROR_NOT_NUMBER
