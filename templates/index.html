@@ -28,20 +28,23 @@
         <label>送料</label>
         <input type="text" name="shipping">
       </div>
-
       <button type="submit">計算する</button>
     </form>
+    <p>
+      <a href="/history">計算結果を表示する</a>
+    </p>
+    
     {% if error %}
     <p class="error_message">{{ error }}</p>
     {% endif %}
     {% if result %}
     <div class="result-box">
       <h2>計算結果</h2>
-      <p>商品名:{{ result.name}}</p>
-      <p>利益:{{ result.profit}} 円</p>
-      <p>利益率:{{ result.profit_rate}} %</p>
-      <p class="judge {{ result.judge_class }}">
-        {{ result.judge }}
+      <p>商品名:{{ result.商品名 }}</p>
+      <p>利益:{{ result.利益 }} 円</p>
+      <p>利益率:{{ result.利益率 }} %</p>
+      <p class="judge {{ result.判定カラー }}">
+        {{ result.判定 }}
       </p>
     </div>
     {% endif %}

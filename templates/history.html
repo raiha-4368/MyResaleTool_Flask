@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="jp">
+
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css')}}" type="text/css">
+  <title>計算履歴</title>
+</head>
+
+<body>
+  <h2> 売買利益 </h2>
+  {% if records %}
+  <table border="1">
+    <tr>
+      <th>商品名 </th>
+      <th>価格</th>
+      <th>原価</th>
+      <th>送料</th>
+      <th>利益</th>
+      <th>利益率</th>
+      <th>判定</th>
+      <th>日時</th>
+    </tr>
+    {% for r in records %}
+    <tr>
+      <td>{{ r["商品名"] }}</td>
+      <td>{{ r["価格"] }}</td>
+      <td>{{ r["原価"] }}</td>
+      <td>{{ r["送料"] }}</td>
+      <td>{{ r["利益"] }}</td>
+      <td>{{ r["利益率"] }}%</td>
+      <td>{{ r["判定"] }}</td>
+      <td>{{ r["日時"] }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p>まだ履歴がありません。</p>
+  {% endif%}
+
+</body>
+
+</html>

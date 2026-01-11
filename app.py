@@ -1,7 +1,14 @@
 import os
 import csv
+from datetime import datetime
 from flask import Flask, render_template, request
 
+########################################################################
+#メルカリ出品前に利益と利益率を計算するツール
+#使い方;
+#コマンドラインにpython app.py
+#実行後、http://127.0.0.1:5000/へアクセス
+########################################################################
 
 app = Flask(__name__)
 
@@ -45,6 +52,17 @@ def export_result_csv(data: dict):
   return
 
 
+#csvファイル読み込み関数
+def load_csv(filepath):
+    records = []
+    if not os.path.exists(filepath):
+        return records
+
+    with open(filepath,newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            records.append(row)
+    return records
 
 #売買時購入の判定処理を関数化
 def judge_profit(profit):
@@ -119,14 +137,16 @@ def index():
                     #赤字判定を関数で行う
                     judge, judge_class = judge_profit(profit)
                     result = {
-                        "name": name,
-                        "price": price,
-                        "cost_price": cost_price,
-                        "shipping": shipping,
-                        "profit": profit,
-                        "profit_rate": profit_rate,
-                        "judge": judge,
-                        "judge_class": judge_class,
+                        "商品名": name,
+                        "価格": price,
+                        "原価": cost_price,
+                        "送料": shipping,
+                        "利益": profit,
+                        "利益率": profit_rate,
+                        "判定": judge,
+                        "判定カラー": judge_class,
+                        "日時": datetime.now().strftime("%Y-%m-%d_%H:%M:%S"),
+
                         }
                     #csvファイル書き込み
                     export_result_csv(result)
@@ -134,23 +154,34 @@ def index():
             except ValueError:
                 error = ERROR_NOT_NUMBER
 
+    records = load_csv("output/output.csv")
 
-
-        
-        # return f"""
-        # 商品名: {name}<br>
-        # 売値: {price}<br>
-        # 原価: {cost_price}<br>
-        # 送料: {shipping}<br>
-        # """
+    #利益でソート
+    rows_sorted = sorted(records, key=lambda x: int(x["利益"]), reverse=True)
 
     return render_template("index.html", result=result, error=error)
 
+@app.route("/history")
+def history():
+    records = load_csv("output/output.csv")
+
+    #利益で降順ソート
+    rows_sorted = sorted(records, key=lambda x: int(x["利益"]), reverse=True)
+    return render_template("history.html", records=rows_sorted)
+
+
+#↓これは一番最後に書いて無きゃいけなさそう
 if __name__ == "__main__":
-    test_judge()  # 確認したいときだけ有効化
+    #test_judge()  # 確認したいときだけ有効化
     app.run(debug=True)
 
-    #TODO:
-    #・入力値バリデーション(未入力・マイナス値)
-    #・判定ロジックを関数化
-    #・デザインを最低限整える
+#TODO:
+#docstring(プログラムの解説)の記述をする
+#index以外のページ遷移とか表示ってできるのだろうか(履歴表示をクローズでもいいけど)
+#csvの中身の並べ替え(利益が高い順、日付が新しい順、赤字だけ表示等)
+# やること案
+# history 画面に
+# 利益フィルタ（赤字だけ等）
+# 日付ソート
+# CSVダウンロード
+# 見た目の軽い整形（表の色分け）
