@@ -23,19 +23,22 @@ ERROR_TOO_LOW = "価格が原価+送料を下回っています"
 ERROR_NOT_NUMBER = "価格・原価・送料は数値で入力してください"
 
 
-
+#利益計算関数
 def  calc_profit(price, cost_price, shipping, fee_rate):
-    """"docstring
-        TODO プログラムの解説を書く
-
+    """
+    売値(price)・原価(cost_price)・送料(shipping)・手数料(fee_rate)から
+    販売後の最終的な利益額を計算して返す。
     """
     return price - cost_price - shipping - (price * fee_rate)
 
 #csvファイルへの書き込みを行う関数
 def export_result_csv(data: dict):
+  """
+  dataで受け取った計算結果をCSVファイル(output/output.csv)に追記する。
+  ファイルが存在しない場合は新規作成し、ヘッダー行も自動で出力する。
+  """
   #outputディレクトリがなければ作成
   os.makedirs("output", exist_ok=True)
- 
   #ファイル名を固定とする場合の処理
   filename = "output/output.csv"
 
@@ -54,6 +57,9 @@ def export_result_csv(data: dict):
 
 #csvファイル読み込み関数
 def load_csv(filepath):
+    """
+    ファイルパスを受け取り、csvファイルを読み込み、その配列を返す。
+    """
     records = []
     if not os.path.exists(filepath):
         return records
@@ -66,6 +72,14 @@ def load_csv(filepath):
 
 #売買時購入の判定処理を関数化
 def judge_profit(profit):
+    """
+    受け取った値を販売時の利益(profit)とし、利益が出ているかを判定し、
+    表示用メッセージとCSS用クラス名を返す。
+    判定基準は以下の通り
+    利益0円未満：赤字
+    利益300未満：利益が少なめ
+    利益300円以上：出品候補
+    """
     if profit < 0:
         return "赤字です","red"
     elif profit < 300: 
@@ -74,6 +88,9 @@ def judge_profit(profit):
         return "出品候補です", "green"
     
 # テスト用関数
+# 通常は実行されない
+#if __name__ == "__main__":以下の
+#test_judgeのコメントアウトを外した場合、有効化される
 def test_judge():
     print("=== test_judge(テスト開始) ===")
     test_cases = [
@@ -176,12 +193,38 @@ if __name__ == "__main__":
     app.run(debug=True)
 
 #TODO:
-#docstring(プログラムの解説)の記述をする
-#index以外のページ遷移とか表示ってできるのだろうか(履歴表示をクローズでもいいけど)
+#改修案
+
+#優先度-1
 #csvの中身の並べ替え(利益が高い順、日付が新しい順、赤字だけ表示等)
-# やること案
-# history 画面に
+# ∟ページリロードで色々出来るようにしたいかもしれない
 # 利益フィルタ（赤字だけ等）
-# 日付ソート
+#  ∟履歴画面で表示するものにも赤字などのcssを反映させる
+
+#優先度-2
+#outputの中身を削除出来るようにする(DB化でもcsvから削除でも)
+# ∟現状DB化などは出来ていないので、csvファイルを弄る方向性ならできるかも?
+
+#優先度-3
 # CSVダウンロード
+#  ∟ダウンロードボタンを付けて、output.csvを任意のディレクトリに保存させる処理を実装したい
+
+#優先度-4
+# logファイルの実装
+# ∟現状では必要性がないが、あった方がいいとは思う。
+
+#優先度-5
 # 見た目の軽い整形（表の色分け）
+#  ∟継続的な課題。htmlやcssの記述と構造の把握をしていきたい。
+
+#優先度-6
+# 難易度が高いため、優先度低
+# csvファイルをインポートすることで、一括で処理できるような機能を追加
+#  ∟出来たらいいなとは思っている
+
+#継続課題
+#docstring(プログラムの解説)の記述をする
+# ∟一応済?もう少しかけることはあるかもしれないけど、コメントだらけで現状でもコメントだらけで見にくいんじゃ?という気もしている
+
+
+
