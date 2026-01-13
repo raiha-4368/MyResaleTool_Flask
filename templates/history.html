@@ -9,7 +9,18 @@
 
 <body>
   <h2> 売買利益 </h2>
+  <div>
+  <a href="/index">戻る</a>
+  </div>
+
   {% if records %}
+  <div>
+    <a href="/history?sort=date">新しい順</a>
+    <a href="/history?sort=profit">利益順</a>
+    <a href="/history?filter=red">赤字のみ</a>
+    <a href="/history?filter=yellow">利益が少なめのみ</a>
+    <a href="/history?filter=green">出品候補のみ</a>
+  </div>
   <table border="1">
     <tr>
       <th>商品名 </th>
@@ -29,11 +40,15 @@
       <td>{{ r["送料"] }}</td>
       <td>{{ r["利益"] }}</td>
       <td>{{ r["利益率"] }}%</td>
-      <td>{{ r["判定"] }}</td>
+      <td class="judge {{ r.判定カラー }}">{{ r["判定"] }}</td>
       <td>{{ r["日時"] }}</td>
+      <td>
+        <a href="/delete?date={{ r['日時'] }}">削除</a>
+      </td>
     </tr>
     {% endfor %}
   </table>
+  <a href="/delete">履歴を全て削除</a>
   {% else %}
   <p>まだ履歴がありません。</p>
   {% endif%}

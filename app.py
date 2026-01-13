@@ -22,6 +22,12 @@ ERROR_POSITYVE = "数値は正の値を入力してください"
 ERROR_TOO_LOW = "価格が原価+送料を下回っています"
 ERROR_NOT_NUMBER = "価格・原価・送料は数値で入力してください"
 
+#ソート機能用
+#csvファイルのカラム名とhtmlのページの齟齬を埋めるためのもの
+SORT_MAP = {
+    "profit": "利益",
+    "date": "日時"
+}
 
 #利益計算関数
 def  calc_profit(price, cost_price, shipping, fee_rate):
@@ -54,6 +60,31 @@ def export_result_csv(data: dict):
   print(f"CSV出力完了:{filename}")
   return
 
+
+#csv書き込み関数(上書き用)
+# def save_csv(path, data: list[dict]):
+#     with open(path, mode="w", newline="", encoding="utf-8") as f:
+#         write = csv.DictWriter(f, fieldnames=data[0].keys())
+#         write.writeheader()
+#         write.writerow(data)
+#     print(f"CSV更新完了:{path}")
+#     return
+
+
+def save_csv(path, data):
+    print("------書き込み内容確認------")
+    print(data)
+    print("------書き込み内容確認終了------")
+    if not data:
+        #全権削除された場合は空ファイルにする
+        open(path, "w").close()
+        return
+    
+    with open(path, mode="w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=data[0].keys())
+        writer.writeheader()    #ヘッダーは必須
+        writer.writerows(data)  #←複数行を書き込む
+    print(f"CSV更新完了:{path}")
 
 #csvファイル読み込み関数
 def load_csv(filepath):
@@ -171,20 +202,79 @@ def index():
             except ValueError:
                 error = ERROR_NOT_NUMBER
 
-    records = load_csv("output/output.csv")
-
-    #利益でソート
-    rows_sorted = sorted(records, key=lambda x: int(x["利益"]), reverse=True)
-
     return render_template("index.html", result=result, error=error)
+
+#ソート機能を独立
+def history_sort(records, sort_key, flag):
+
+    #数値の場合、int変換する必要があるため、分岐処理
+    if sort_key in ("利益","価格","原価","送料"):
+        sort_records = sorted(records, key=lambda x: int(x[sort_key]), reverse=flag)
+    else:
+        sort_records = sorted(records, key=lambda x: x[sort_key], reverse=flag)
+    return sort_records
+
+#フィルター機能を独立
+def history_filter(records, filter_word,filter_key):
+    return [ r for r in records if r[filter_word] == filter_key]
 
 @app.route("/history")
 def history():
+    """
+    history の Docstring
+    過去の入力履歴であるoutput.csvを読み込み、それを並び替えもしくは特定条件で絞り込みを行う
+    押されたURLによってページ遷移を行い、読み込み、切り替えを行う
+    """
     records = load_csv("output/output.csv")
+    filtered = records
 
-    #利益で降順ソート
-    rows_sorted = sorted(records, key=lambda x: int(x["利益"]), reverse=True)
-    return render_template("history.html", records=rows_sorted)
+    #渡されたURLのsort=の部分を取得。デフォルトは日付
+    sort_parm = request.args.get("sort", "date") 
+    sort_key = SORT_MAP.get(sort_parm, "日時")
+
+    #渡されたURLのfilter部分を取得。デフォルト値は指定なし
+    filter_key = request.args.get("filter", None)
+
+    #フィルター(現状は判定カラーのみ)が設定されているのなら
+    if filter_key != None:
+        filtered = history_filter(filtered, "判定カラー", filter_key)
+
+    #sort_key(日付、利益)でソートを行う
+    filtered = history_sort(filtered, sort_key, True)
+    
+    return render_template("history.html", records=filtered)
+
+@app.route("/delete")
+def delete():
+    #日付を取得
+    target_date = request.args.get("date")
+
+    records = load_csv("output/output.csv") 
+
+    #削除対象以外だけを出す
+    #以下、省略していない書き方の認識
+    for r in records:
+        print("確認用")
+        print("csv date:", repr(r["日時"]))
+        if r["日時"] == target_date:
+             print("確認2")
+             print("ターゲット:",target_date)
+             print("csvデータ：",r["日時"])
+             print("一致している！！1回だけの想定")
+        else:
+            print("一致していない！これだけを格納想定")
+            print("ターゲット:",target_date)
+            print("csvデータ：",r["日時"])
+
+    new_records = [r for r in records if r["日時"] != target_date]
+    print("======削除後のデータ確認======")
+    print(new_records)
+    print("======削除後のデータ確認終了======")
+
+
+    save_csv("output/output.csv" ,new_records)
+
+    return render_template("history.html")
 
 
 #↓これは一番最後に書いて無きゃいけなさそう
@@ -200,10 +290,12 @@ if __name__ == "__main__":
 # ∟ページリロードで色々出来るようにしたいかもしれない
 # 利益フィルタ（赤字だけ等）
 #  ∟履歴画面で表示するものにも赤字などのcssを反映させる
+#  ∟一応上記は実装済み(改修の可能性はあるけども)
 
 #優先度-2
 #outputの中身を削除出来るようにする(DB化でもcsvから削除でも)
 # ∟現状DB化などは出来ていないので、csvファイルを弄る方向性ならできるかも?
+# ∟1件ずつの削除は出来た、全権削除は未実装
 
 #優先度-3
 # CSVダウンロード
@@ -227,4 +319,8 @@ if __name__ == "__main__":
 # ∟一応済?もう少しかけることはあるかもしれないけど、コメントだらけで現状でもコメントだらけで見にくいんじゃ?という気もしている
 
 
+
+#追加課題
+#index.html↔history.htmlの相互移動を可能にすること
+#∟実行テストのときちょっとめんどくさい
 
