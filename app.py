@@ -1,6 +1,9 @@
 import os
 import csv
+import logging
+from logging.handlers import RotatingFileHandler
 from datetime import datetime
+from flask import send_file
 from flask import Flask, render_template, request
 
 ########################################################################
@@ -29,13 +32,24 @@ SORT_MAP = {
     "date": "日時"
 }
 
+SORT_CAST = {
+    "日時": str,
+    "利益": int,
+    "価格": int,
+    "原価": int,
+    "送料": int,
+    "利益率": int,
+}
+
+
 #利益計算関数
 def  calc_profit(price, cost_price, shipping, fee_rate):
     """
     売値(price)・原価(cost_price)・送料(shipping)・手数料(fee_rate)から
     販売後の最終的な利益額を計算して返す。
     """
-    return price - cost_price - shipping - (price * fee_rate)
+    profit = price - cost_price - shipping - (price * fee_rate)
+    return profit
 
 #csvファイルへの書き込みを行う関数
 def export_result_csv(data: dict):
@@ -57,7 +71,7 @@ def export_result_csv(data: dict):
     #現在ファイル名を固定としているため、csvのカラムを記述する処理はコメントアウト
     #write.writeheader()
     write.writerow(data)
-  print(f"CSV出力完了:{filename}")
+  logger.info(f"CSV出力完了:{filename}")
   return
 
 
@@ -163,9 +177,12 @@ def index():
         cost_price = request.form.get("cost_price")
         shipping = request.form.get("shipping")
 
+        logger.info("入力受付: name=%s, price=%s, cost=%s, shipping=%s", name,price,cost_price,shipping)
+
         #空欄チェック
         if not name or not price or not cost_price or not shipping:
             error = ERROR_REQUIRED
+            logger.warning("未入力エラー")
         else:
             try:
                 #入力値チェック後、int型へ変更
@@ -184,6 +201,7 @@ def index():
                     profit_rate = int(profit / cost_price * 100) if cost_price > 0 else 0
                     #赤字判定を関数で行う
                     judge, judge_class = judge_profit(profit)
+                    logger.info("計算完了 profit=%s, judge=%s", profit, judge)
                     result = {
                         "商品名": name,
                         "価格": price,
@@ -201,22 +219,33 @@ def index():
 
             except ValueError:
                 error = ERROR_NOT_NUMBER
+                logger.warning("数値変換エラー")
 
     return render_template("index.html", result=result, error=error)
 
 #ソート機能を独立
 def history_sort(records, sort_key, flag):
-
+    cast = SORT_CAST.get(sort_key, str)
+    logger.info("%sソート実施", sort_key)
+    logger.info("レコード件数(ソート前):%s件数", len(records))
+    sort_records = sorted(records, key=lambda x: cast(x[sort_key]), reverse=flag)
+    logger.info("レコード件数:%s件数", len(sort_records))
     #数値の場合、int変換する必要があるため、分岐処理
-    if sort_key in ("利益","価格","原価","送料"):
-        sort_records = sorted(records, key=lambda x: int(x[sort_key]), reverse=flag)
-    else:
-        sort_records = sorted(records, key=lambda x: x[sort_key], reverse=flag)
+    # if sort_key in ("利益","価格","原価","送料","利益率"):
+    #     sort_records = sorted(records, key=lambda x: int(x[sort_key]), reverse=flag)
+    # else:
+    #     sort_records = sorted(records, key=lambda x: x[sort_key], reverse=flag)
     return sort_records
 
 #フィルター機能を独立
 def history_filter(records, filter_word,filter_key):
-    return [ r for r in records if r[filter_word] == filter_key]
+    logger.info("%sフィルター実施(key)", filter_key)
+    logger.info("%sフィルター実施(word)", filter_word)
+
+    logger.info("レコード件数(フィルタ前):%s件数", len(records))
+    filter_records = [ r for r in records if r[filter_word] == filter_key]
+    logger.info("レコード件数(フィルタ後):%s件数", len(filter_records))
+    return filter_records
 
 @app.route("/history")
 def history():
@@ -236,91 +265,114 @@ def history():
     filter_key = request.args.get("filter", None)
 
     #フィルター(現状は判定カラーのみ)が設定されているのなら
-    if filter_key != None:
+    logger.info("request.args.get=%s", filter_key)
+
+    if filter_key:
         filtered = history_filter(filtered, "判定カラー", filter_key)
 
     #sort_key(日付、利益)でソートを行う
     filtered = history_sort(filtered, sort_key, True)
-    
-    return render_template("history.html", records=filtered)
+
+    return render_template(
+        "history.html",
+         records=filtered,
+         current_sort=sort_key,
+         current_filter=filter_key)
 
 @app.route("/delete")
 def delete():
     #日付を取得
     target_date = request.args.get("date")
-
+    logger.info("CSV削除: target_date= %s", target_date)
     records = load_csv("output/output.csv") 
 
     #削除対象以外だけを出す
     #以下、省略していない書き方の認識
-    for r in records:
-        print("確認用")
-        print("csv date:", repr(r["日時"]))
-        if r["日時"] == target_date:
-             print("確認2")
-             print("ターゲット:",target_date)
-             print("csvデータ：",r["日時"])
-             print("一致している！！1回だけの想定")
-        else:
-            print("一致していない！これだけを格納想定")
-            print("ターゲット:",target_date)
-            print("csvデータ：",r["日時"])
+    # for r in records:
+    #     print("確認用")
+    #     print("csv date:", repr(r["日時"]))
+    #     if r["日時"] == target_date:
+    #          print("確認2")
+    #          print("ターゲット:",target_date)
+    #          print("csvデータ：",r["日時"])
+    #          print("一致している！！1回だけの想定")
+    #     else:
+    #         print("一致していない！これだけを格納想定")
+    #         print("ターゲット:",target_date)
+    #         print("csvデータ：",r["日時"])
 
     new_records = [r for r in records if r["日時"] != target_date]
-    print("======削除後のデータ確認======")
-    print(new_records)
-    print("======削除後のデータ確認終了======")
+    # print("======削除後のデータ確認======")
+    # print(new_records)
+    # print("======削除後のデータ確認終了======")
+    logger.info("CSV削除: 件数=%s", len(new_records))
 
 
     save_csv("output/output.csv" ,new_records)
 
     return render_template("history.html")
 
+@app.route("/download")
+def download_csv():
+    path = "output/output.csv"
+    logger.info("CSVダウンロード実行")
+    if not os.path.exists(path):
+        return "CSVファイルがありません。"
+    return send_file(
+        path,
+        as_attachment=True,
+        download_name = "profit_history.csv",
+        mimetype = "text/csv"
+    )
+
+
 
 #↓これは一番最後に書いて無きゃいけなさそう
 if __name__ == "__main__":
     #test_judge()  # 確認したいときだけ有効化
+    #======================================
+    # logging 設定
+    #======================================
+    os.makedirs("logs", exist_ok=True)
+
+    log_handler = RotatingFileHandler(
+        "logs/app.log",
+        maxBytes = 1024 * 1024, # 1MBでローテーション
+        backupCount = 3,        # 古いログを3世代保持
+        encoding = "utf-8"
+    )
+    log_formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(message)s"
+    )
+    log_handler.setFormatter(log_formatter)
+
+    logger = logging.getLogger("resale_app")
+    logger.setLevel(logging.INFO)
+    logger.addHandler(log_handler)
+
     app.run(debug=True)
 
 #TODO:
-#改修案
+# 改修案
+# ①csvファイルのインポート処理
+#   ∟計算対象の一括インポート処理
+#   ∟実務を考えるならあった方が良さそうな機能
+#   ∟難易度が高い?みたいな認識
 
-#優先度-1
-#csvの中身の並べ替え(利益が高い順、日付が新しい順、赤字だけ表示等)
-# ∟ページリロードで色々出来るようにしたいかもしれない
-# 利益フィルタ（赤字だけ等）
-#  ∟履歴画面で表示するものにも赤字などのcssを反映させる
-#  ∟一応上記は実装済み(改修の可能性はあるけども)
-
-#優先度-2
-#outputの中身を削除出来るようにする(DB化でもcsvから削除でも)
-# ∟現状DB化などは出来ていないので、csvファイルを弄る方向性ならできるかも?
-# ∟1件ずつの削除は出来た、全権削除は未実装
-
-#優先度-3
-# CSVダウンロード
-#  ∟ダウンロードボタンを付けて、output.csvを任意のディレクトリに保存させる処理を実装したい
-
-#優先度-4
-# logファイルの実装
-# ∟現状では必要性がないが、あった方がいいとは思う。
-
-#優先度-5
-# 見た目の軽い整形（表の色分け）
+# 継続課題
+# docstring(プログラムの解説)の記述をする
+# ∟一応済?もう少しかけることはあるかもしれないけど、コメントだらけで現状でもコメントだらけで見にくいんじゃ?という気もしている
+# 見た目の軽い整形(htmlやcssの理解を深める事)
 #  ∟継続的な課題。htmlやcssの記述と構造の把握をしていきたい。
 
-#優先度-6
-# 難易度が高いため、優先度低
-# csvファイルをインポートすることで、一括で処理できるような機能を追加
-#  ∟出来たらいいなとは思っている
 
-#継続課題
-#docstring(プログラムの解説)の記述をする
-# ∟一応済?もう少しかけることはあるかもしれないけど、コメントだらけで現状でもコメントだらけで見にくいんじゃ?という気もしている
+# 出来るのか不明なこと
+# DB実装
+#     ∟現状のcsv管理とは根本から変えなくてはならない認識
+#      やる場合はプログラムを分けたい
+# 動的な表の実装
+#     ∟履歴のページリロード(URLの遷移)ではなく、そのページの状態でフィルタ、ソートができる機能を付ける
+#      Javascriptとかphpを駆使することになるのでしょうか、ちょっとわからない
 
 
-
-#追加課題
-#index.html↔history.htmlの相互移動を可能にすること
-#∟実行テストのときちょっとめんどくさい
 

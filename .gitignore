@@ -12,5 +12,9 @@ venv/
 # output
 output/
 
+# logs
+logs/
+*.log
+
 # OS
 .DS_Store

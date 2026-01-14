@@ -10,16 +10,19 @@
 <body>
   <h2> 売買利益 </h2>
   <div>
-  <a href="/index">戻る</a>
+    <a href="/" class="btn-back">←入力画面に戻る</a>
   </div>
 
   {% if records %}
   <div>
     <a href="/history?sort=date">新しい順</a>
-    <a href="/history?sort=profit">利益順</a>
-    <a href="/history?filter=red">赤字のみ</a>
-    <a href="/history?filter=yellow">利益が少なめのみ</a>
-    <a href="/history?filter=green">出品候補のみ</a>
+    <a href="/history?sort=profit&filter={{ curent_filter }}">利益順</a>
+    <a href="/history?filter=red&sort={{ curent_sort}}">赤字のみ</a>
+    <a href="/history?filter=yellow&sort={{ curent_sort}}">利益が少なめのみ</a>
+    <a href="/history?filter=green&sort={{ curent_sort}}">出品候補のみ</a>
+  </div>
+  <div>
+    <a href="/download" class="btn-download">CSVダウンロード</a>
   </div>
   <table border="1">
     <tr>
