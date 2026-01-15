@@ -1,9 +1,13 @@
 import os
+import io
 import csv
+import uuid
 import logging
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from flask import send_file
+from flask import redirect
+from flask import url_for
 from flask import Flask, render_template, request
 
 ########################################################################
@@ -48,6 +52,7 @@ def  calc_profit(price, cost_price, shipping, fee_rate):
     売値(price)・原価(cost_price)・送料(shipping)・手数料(fee_rate)から
     販売後の最終的な利益額を計算して返す。
     """
+    logger.info("def calc_profit 開始")
     profit = price - cost_price - shipping - (price * fee_rate)
     return profit
 
@@ -57,6 +62,7 @@ def export_result_csv(data: dict):
   dataで受け取った計算結果をCSVファイル(output/output.csv)に追記する。
   ファイルが存在しない場合は新規作成し、ヘッダー行も自動で出力する。
   """
+  logger.info("def export_result_csv 開始")
   #outputディレクトリがなければ作成
   os.makedirs("output", exist_ok=True)
   #ファイル名を固定とする場合の処理
@@ -86,9 +92,8 @@ def export_result_csv(data: dict):
 
 
 def save_csv(path, data):
-    print("------書き込み内容確認------")
-    print(data)
-    print("------書き込み内容確認終了------")
+    logger.info("def save_csv 開始")
+    logger.info("書き込み内容: %s", data)
     if not data:
         #全権削除された場合は空ファイルにする
         open(path, "w").close()
@@ -98,7 +103,7 @@ def save_csv(path, data):
         writer = csv.DictWriter(f, fieldnames=data[0].keys())
         writer.writeheader()    #ヘッダーは必須
         writer.writerows(data)  #←複数行を書き込む
-    print(f"CSV更新完了:{path}")
+    logger.info("CSV更新完了:%s", path)
 
 #csvファイル読み込み関数
 def load_csv(filepath):
@@ -164,67 +169,90 @@ def test_judge():
 
     return
 
+#入力値に対する処理をindexから分離し、importでも使えるようにした関数
+def input_exe(name, price, cost_price, shipping):
+    logger.info("def input_exe 開始")
+    try:
+        name = str(name)
+        price = int(price)
+        cost_price = int(cost_price)
+        shipping = int(shipping)
+        judge = None
+        judge_class = None
+        result = None
+        error = None
+
+        logger.info("入力受付: name=%s, price=%s, cost=%s, shipping=%s", name,price,cost_price,shipping)
+
+        #数値の正当性をチェック
+        if price <= 0 or cost_price <= 0 or shipping <= 0:
+            error = ERROR_POSITYVE
+        elif price < cost_price + shipping:
+            error = ERROR_TOO_LOW
+
+        else:
+            logger.info("入力値正常性確認完了")
+
+            #ここで計算処理
+            profit  = int(calc_profit(price, cost_price, shipping, FEE_RATE))
+            logger.info("profit = %s", profit)
+            profit_rate = int(profit / cost_price * 100) if cost_price > 0 else 0
+            logger.info("profit_rate = %s", profit_rate)
+            #赤字判定を関数で行う
+            judge, judge_class = judge_profit(profit)
+            logger.info("計算完了 profit=%s, judge=%s", profit, judge)
+            result = {
+                "商品名": name,
+                "価格": price,
+                "原価": cost_price,
+                "送料": shipping,
+                "利益": profit,
+                "利益率": profit_rate,
+                "判定": judge,
+                "判定カラー": judge_class,
+                "日時": datetime.now().strftime("%Y-%m-%d_%H:%M:%S"),
+                'ID': str(uuid.uuid4()),
+            }
+            #csvファイル書き込み
+            export_result_csv(result)
+    except ValueError:
+        error = ERROR_NOT_NUMBER
+        logger.warning("数値変換エラー")
+ 
+    if error:
+        logger.error("%s",error)
+
+    return result, error
+
+
 @app.route('/', methods=["GET","POST"])
 def index():
+    logger.info("def index 開始")
+    
+    #infoかdebugどっちがいいかは要検討
+    logger.debug("URL: %s", request.url)
+
     result = None
     error = None
-    judge = None
-    judge_class = None
 
     if request.method == "POST":
         name = request.form.get("name")
         price = request.form.get("price")
         cost_price = request.form.get("cost_price")
         shipping = request.form.get("shipping")
-
-        logger.info("入力受付: name=%s, price=%s, cost=%s, shipping=%s", name,price,cost_price,shipping)
-
         #空欄チェック
         if not name or not price or not cost_price or not shipping:
             error = ERROR_REQUIRED
             logger.warning("未入力エラー")
         else:
-            try:
-                #入力値チェック後、int型へ変更
-                price = int(price)
-                cost_price = int(cost_price)
-                shipping = int(shipping)
-
-                #数値の正当性をチェック
-                if price <= 0 or cost_price <= 0 or shipping <= 0:
-                  error = ERROR_POSITYVE
-                elif price < cost_price + shipping:
-                    error = ERROR_TOO_LOW
-                else:
-                    #ここで計算処理
-                    profit  = int(calc_profit(price, cost_price, shipping, FEE_RATE))
-                    profit_rate = int(profit / cost_price * 100) if cost_price > 0 else 0
-                    #赤字判定を関数で行う
-                    judge, judge_class = judge_profit(profit)
-                    logger.info("計算完了 profit=%s, judge=%s", profit, judge)
-                    result = {
-                        "商品名": name,
-                        "価格": price,
-                        "原価": cost_price,
-                        "送料": shipping,
-                        "利益": profit,
-                        "利益率": profit_rate,
-                        "判定": judge,
-                        "判定カラー": judge_class,
-                        "日時": datetime.now().strftime("%Y-%m-%d_%H:%M:%S"),
-
-                        }
-                    #csvファイル書き込み
-                    export_result_csv(result)
-
-            except ValueError:
-                error = ERROR_NOT_NUMBER
-                logger.warning("数値変換エラー")
+            #入力値に対する処理を行う
+            result,error = input_exe(name, price, cost_price, shipping)
 
     return render_template("index.html", result=result, error=error)
 
 #ソート機能を独立
 def history_sort(records, sort_key, flag):
+    logger.info("def history_sort 開始")
     cast = SORT_CAST.get(sort_key, str)
     logger.info("%sソート実施", sort_key)
     logger.info("レコード件数(ソート前):%s件数", len(records))
@@ -239,6 +267,7 @@ def history_sort(records, sort_key, flag):
 
 #フィルター機能を独立
 def history_filter(records, filter_word,filter_key):
+    logger.info("def history_filter 開始")
     logger.info("%sフィルター実施(key)", filter_key)
     logger.info("%sフィルター実施(word)", filter_word)
 
@@ -254,11 +283,16 @@ def history():
     過去の入力履歴であるoutput.csvを読み込み、それを並び替えもしくは特定条件で絞り込みを行う
     押されたURLによってページ遷移を行い、読み込み、切り替えを行う
     """
+    logger.info("def history開始")
+    logger.info("URL: %s", request.url)
+
     records = load_csv("output/output.csv")
     filtered = records
 
     #渡されたURLのsort=の部分を取得。デフォルトは日付
-    sort_parm = request.args.get("sort", "date") 
+    sort_parm = request.args.get("sort") or "date"
+
+    #sort_pramを鍵として、SORT_MAPから値を取得(取得できなければデフォルトを日時とする)
     sort_key = SORT_MAP.get(sort_parm, "日時")
 
     #渡されたURLのfilter部分を取得。デフォルト値は指定なし
@@ -273,17 +307,32 @@ def history():
     #sort_key(日付、利益)でソートを行う
     filtered = history_sort(filtered, sort_key, True)
 
+    logger.info("sort_parm:%s",sort_parm)
+    logger.info("sort_key:%s",sort_key)
+    logger.info("filter_key:%s",filter_key)
+
     return render_template(
         "history.html",
          records=filtered,
-         current_sort=sort_key,
+         current_sort=sort_parm,
          current_filter=filter_key)
+
+@app.route("/delete_all")
+def delete_all():
+    logger.info("def delete_all 開始")
+
+    #w モードで開いて空にする
+    with open('output/output.csv', 'w', encoding='utf-8') as f:
+      pass  # 何もしない
+
+    return redirect(url_for("history"))
 
 @app.route("/delete")
 def delete():
+    logger.info("def delete 開始")
     #日付を取得
-    target_date = request.args.get("date")
-    logger.info("CSV削除: target_date= %s", target_date)
+    target_id = request.args.get("id")
+    logger.info("CSV削除: target_date= %s", target_id)
     records = load_csv("output/output.csv") 
 
     #削除対象以外だけを出す
@@ -301,7 +350,7 @@ def delete():
     #         print("ターゲット:",target_date)
     #         print("csvデータ：",r["日時"])
 
-    new_records = [r for r in records if r["日時"] != target_date]
+    new_records = [r for r in records if r["ID"] != target_id]
     # print("======削除後のデータ確認======")
     # print(new_records)
     # print("======削除後のデータ確認終了======")
@@ -310,10 +359,14 @@ def delete():
 
     save_csv("output/output.csv" ,new_records)
 
-    return render_template("history.html")
+    #redirect(url_for("history"))は
+    #今の関数で画面を描かない、もとのURLに戻して再読み込みの意味がある
+    return redirect(url_for("history"))
 
 @app.route("/download")
 def download_csv():
+    logger.info("def download_csv 開始")
+
     path = "output/output.csv"
     logger.info("CSVダウンロード実行")
     if not os.path.exists(path):
@@ -325,7 +378,43 @@ def download_csv():
         mimetype = "text/csv"
     )
 
+@app.route('/import', methods=["POST"])
+def import_csv():
+    logger.info("def import_csv 開始")
+    file = request.files.get("file")
 
+    results = []
+    error = None
+
+    logger.info("CSV import 開始: %s", file.filename)
+
+    if not file:
+        logger.error("ファイルがアップロードされていません。")
+        return redirect("/")
+    
+    stream = io.StringIO(file.stream.read().decode("utf-8"), newline=None)
+    rows = csv.DictReader(stream)
+    logger.info("ファイルにあるデータ: %s", rows)
+    count = 0
+    for row in rows:
+        try:
+            logger.info("row確認: %s", row)
+
+            name = str(row["商品名"])
+            price= int(row["価格"])
+            cost_price= int(row["原価"])
+            shipping= int(row["送料"])
+
+            #入力値に対する処理を行う
+            result, error = input_exe(name, price, cost_price, shipping)
+            results.append(result)
+            count += 1
+        except Exception as e:
+            logger.error("インポート失敗 row=%s, error=%s", row, e)
+        
+        logger.info("CSV import finished: %s rows", count)
+
+    return render_template("index.html", import_success=True, imported_records=results, error=error)
 
 #↓これは一番最後に書いて無きゃいけなさそう
 if __name__ == "__main__":

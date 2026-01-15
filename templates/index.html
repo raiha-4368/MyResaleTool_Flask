@@ -30,10 +30,16 @@
       </div>
       <button type="submit">計算する</button>
     </form>
+    <form action="/import" method="post" enctype="multipart/form-data">
+      <div>
+        <input type="file" name="file" accept=".csv">
+        <button type="submit">CSVインポート</button>
+      </div>
+    </form>
     <p>
       <a href="/history" class="btn-history">履歴一覧を表示</a>
     </p>
-    
+
     {% if error %}
     <p class="error_message">{{ error }}</p>
     {% endif %}
@@ -46,6 +52,28 @@
       <p class="judge {{ result.判定カラー }}">
         {{ result.判定 }}
       </p>
+    </div>
+    {% endif %}
+    {% if import_success %}
+    <p class="success">CSVインポートに成功しました。</p>
+    <div class="result-box">
+      <h2>計算結果
+        <table border="1">
+          <tr>
+            <th>商品名</th>
+            <th>利益</th>
+            <th>利益率</th>
+            <th>判定</th>
+          </tr>
+          {% for r in imported_records %}
+          <tr>
+            <td>{{ r["商品名"] }}</td>
+            <td>{{ r["利益"] }}</td>
+            <td>{{ r["利益率"] }}%</td>
+            <td class="judge {{ r.判定カラー }}">{{ r["判定"] }}</td>
+          </tr>
+          {% endfor %}
+        </table>
     </div>
     {% endif %}
   </div>

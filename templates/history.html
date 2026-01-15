@@ -15,11 +15,12 @@
 
   {% if records %}
   <div>
-    <a href="/history?sort=date">新しい順</a>
-    <a href="/history?sort=profit&filter={{ curent_filter }}">利益順</a>
-    <a href="/history?filter=red&sort={{ curent_sort}}">赤字のみ</a>
-    <a href="/history?filter=yellow&sort={{ curent_sort}}">利益が少なめのみ</a>
-    <a href="/history?filter=green&sort={{ curent_sort}}">出品候補のみ</a>
+    <a href="/history">全件表示</a>
+    <a href="/history?sort=date{% if current_filter %}&filter={{ current_filter }}{% endif %}">新しい順</a>
+    <a href="/history?sort=profit{% if current_filter %}&filter={{ current_filter }}{% endif %}">利益順</a>
+    <a href="/history?filter=red&sort={{ current_sort }}">赤字のみ</a>
+    <a href="/history?filter=yellow&sort={{ current_sort }}">利益が少なめのみ</a>
+    <a href="/history?filter=green&sort={{ current_sort }}">出品候補のみ</a>
   </div>
   <div>
     <a href="/download" class="btn-download">CSVダウンロード</a>
@@ -46,12 +47,12 @@
       <td class="judge {{ r.判定カラー }}">{{ r["判定"] }}</td>
       <td>{{ r["日時"] }}</td>
       <td>
-        <a href="/delete?date={{ r['日時'] }}">削除</a>
+        <a href="/delete?id={{ r['ID'] }}">削除</a>
       </td>
     </tr>
     {% endfor %}
   </table>
-  <a href="/delete">履歴を全て削除</a>
+  <a href="/delete_all">履歴を全て削除</a>
   {% else %}
   <p>まだ履歴がありません。</p>
   {% endif%}
