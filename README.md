@@ -40,18 +40,58 @@ pip install -r requirements.txt
 ## フォルダ構成(仮想環境を作成した場所によって異なりますが以下を推奨)
 flask/  
 ├ myenv/←上記コマンドで作成した仮想環境（こちらはGit管理しない）  
-flask_test/  
- ├ app.py  
- └ index.html  
- └ .gitignore  
- └ requirements.txt  
-    └ templates/  
+flask_test/    
+├─docs  
+│  └─****.png (実行時のスクリーンショット各種)    
+├─logs  
+│  └─app.log  
+├─output  
+│  └─output.csv  
+│  └─test_input.csv (importテスト用のデータ)  
+├─static  
+│  └─css  
+├─templates  
+│  └ index.html  
+│  └ history.html  
+└─test  
+│  └─logig_test.py  
+├ app.py  
+├ logic.py  
+└ requirements.txt  
+└ .gitignore  
 
 ### 起動
 python app.py
 
 上記実行後、以下へコマンドラインに表示されるアドレス(以下デフォルト)へアクセス  
 http://127.0.0.1:5000/  
+
+## 主な機能
+1. 商品名,価格,原価,送料の入力値を受け取り、利益,利益率を出し、出品対象となるかどうかの判定を行う。  
+2. 1の処理をcsvファイルによるインポートを行うことで、複数件同時に行うことができる。
+3. 履歴をoutput以下にcsv形式で保持し、プログラム内で読み取ることができる。
+4. 3のcsv形式の履歴を削除することができる。(1つずつor全件同時)
+5. 3のcsv形式の履歴をエクスポートすることができる。
+
+## 簡易設計
+app.py(flaskのエントリーインポート)
+	∟index  
+	∟history  
+	∟delete_all  
+	∟delete  
+	∟download  
+	∟import  
+	
+logic.py(CSV処理/計算及び判定/フィルタ・ソート機能)
+	∟calc_profit (利益計算関数)  
+	∟export_result_csv (csvファイルへの書き込みを行う)  
+	∟save_csv (csvファイルの書き込み)  
+	∟load_csv (csvファイルの読み込み)  
+	∟judge_profit (買時購入の判定処理)  
+	∟input_exe (入力値に対する処理)  
+	∟history_sort (ソート機能)  
+	∟history_filter (フィルタ機能)  
+
 
 ## 関数のテスト
 簡単なテスト関数(手動確認用)も含まれます。コメントアウトによりON,OFFする想定です。  
@@ -60,7 +100,7 @@ http://127.0.0.1:5000/
     test_judge()  # 確認したいときだけ有効化  
     app.run(debug=True)"  
 
-## 実行イメージ(スクリーンショットを貼る予定)  
+## 実行イメージ(スクリーンショットは更新予定)  
 ### 出品候補の例
 #### 出品候補
 ![出品候補](docs/出品候補_02.png)
@@ -81,3 +121,6 @@ http://127.0.0.1:5000/
 - 履歴のCSV保存
 - 入力フォームのUI改善
 - デプロイ
+export_result_csv  
+save_csvの違いを明確にする  
+もし違いがない場合、1つの処理とする  
