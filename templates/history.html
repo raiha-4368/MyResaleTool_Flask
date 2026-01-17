@@ -8,56 +8,60 @@
 </head>
 
 <body>
-  <h2> 売買利益 </h2>
-  <div>
-    <a href="/" class="btn-back">←入力画面に戻る</a>
-  </div>
+  <div class="container">
+    <h2> 売買利益 </h2>
+    <div>
+      <a href="/" class="btn-back">←入力画面に戻る</a>
+    </div>
 
 
-  <div>
-    <a href="/history">全件表示</a>
-    <a href="/history?sort=date{% if current_filter %}&filter={{ current_filter }}{% endif %}">新しい順</a>
-    <a href="/history?sort=profit{% if current_filter %}&filter={{ current_filter }}{% endif %}">利益順</a>
-    <a href="/history?filter=red&sort={{ current_sort }}">赤字のみ</a>
-    <a href="/history?filter=yellow&sort={{ current_sort }}">利益が少なめのみ</a>
-    <a href="/history?filter=green&sort={{ current_sort }}">出品候補のみ</a>
-  </div>
-  <div>
-    <a href="/download" class="btn-download">CSVダウンロード</a>
-  </div>
-  <table border="1">
-    <tr>
-      <th>商品名 </th>
-      <th>価格</th>
-      <th>原価</th>
-      <th>送料</th>
-      <th>利益</th>
-      <th>利益率</th>
-      <th>判定</th>
-      <th>日時</th>
-    </tr>
-    {% if records %}
-    {% for r in records %}
-    <tr>
-      <td>{{ r["商品名"] }}</td>
-      <td>{{ r["価格"] }}</td>
-      <td>{{ r["原価"] }}</td>
-      <td>{{ r["送料"] }}</td>
-      <td>{{ r["利益"] }}</td>
-      <td>{{ r["利益率"] }}%</td>
-      <td class="judge {{ r.判定カラー }}">{{ r["判定"] }}</td>
-      <td>{{ r["日時"] }}</td>
-      <td>
-        <a href="/delete?id={{ r['ID'] }}">削除</a>
-      </td>
-    </tr>
-    {% endfor %}
-  </table>
-  <a href="/delete_all">履歴を全て削除</a>
-  {% else %}
-  <p>まだ履歴がありません。</p>
-  {% endif%}
+    <div>
+      <a href="/history">全件表示</a>
+      <a href="/history?sort=date{% if current_filter %}&filter={{ current_filter }}{% endif %}">新しい順</a>
+      <a href="/history?sort=profit{% if current_filter %}&filter={{ current_filter }}{% endif %}">利益順</a>
+      <a href="/history?filter=red&sort={{ current_sort }}">赤字のみ</a>
+      <a href="/history?filter=yellow&sort={{ current_sort }}">利益が少なめのみ</a>
+      <a href="/history?filter=green&sort={{ current_sort }}">出品候補のみ</a>
+    </div>
+    <div>
+      <a href="/download" class="btn-download">CSVダウンロード</a>
+    </div>
+    <table border="1">
+      <tr>
+        <th>商品名 </th>
+        <th>価格</th>
+        <th>原価</th>
+        <th>送料</th>
+        <th>利益</th>
+        <th>利益率</th>
+        <th>判定</th>
+        <th>日時</th>
+      </tr>
+      {% if records %}
+      {% for r in records %}
+      <tr>
+        <td>{{ r["商品名"] }}</td>
+        <td>{{ r["価格"] }}</td>
+        <td>{{ r["原価"] }}</td>
+        <td>{{ r["送料"] }}</td>
+        <td>{{ r["利益"] }}</td>
+        <td>{{ r["利益率"] }}%</td>
+        <td class="judge {{ r.判定カラー }}">{{ r["判定"] }}</td>
+        <td>{{ r["日時"] }}</td>
+        <td>
+          <a href="/delete?id={{ r['ID'] }}">削除</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    <a href="/delete_all">履歴を全て削除</a>
+    {% else %}
+    </table>
+    <p>まだ履歴がありません。</p>
+    {% endif%}
 
+
+  </div>
 </body>
 
 </html>

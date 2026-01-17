@@ -14,23 +14,23 @@
     <form method="post" class="form-box">
       <div class="field">
         <label>商品名</label>
-        <input type="text" name="name">
+        <input type="text" name="name" class="single">
       </div>
       <div class="field">
         <label>売値</label>
-        <input type="text" name="price">
+        <input type="text" name="price" class="single">
       </div>
       <div class="field">
         <label>原価</label>
-        <input type="text" name="cost_price">
+        <input type="text" name="cost_price" class="single">
       </div>
       <div class="field">
         <label>送料</label>
-        <input type="text" name="shipping">
+        <input type="text" name="shipping" class="single">
       </div>
       <button type="submit">計算する</button>
     </form>
-    <form action="/import" method="post" enctype="multipart/form-data">
+    <form action="/import" method="post" enctype="multipart/form-data" class="import-form">
       <div>
         <input type="file" name="file" accept=".csv">
         <button type="submit">CSVインポート</button>
@@ -65,7 +65,7 @@
             <th>利益率</th>
             <th>判定</th>
           </tr>
-          {% for r in imported_records %}
+          {% for r in import_records %}
           <tr>
             <td>{{ r["商品名"] }}</td>
             <td>{{ r["利益"] }}</td>

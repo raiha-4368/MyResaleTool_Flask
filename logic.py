@@ -2,6 +2,7 @@ import os
 import io
 import csv
 import uuid
+import logging
 from datetime import datetime
 
 ########################################################################
@@ -29,6 +30,8 @@ SORT_CAST = {
     "利益率": int,
 }
 
+#app.pyからlog設定を取得
+logger = logging.getLogger(__name__)
 
 #利益計算関数
 def  calc_profit(price, cost_price, shipping, fee_rate):
@@ -36,89 +39,53 @@ def  calc_profit(price, cost_price, shipping, fee_rate):
     売値(price)・原価(cost_price)・送料(shipping)・手数料(fee_rate)から
     販売後の最終的な利益額を計算して返す。
     """
-    print("def calc_profit 開始")
+    logger.info("def calc_profit 開始")
     profit = price - cost_price - shipping - (price * fee_rate)
     return profit
 
-
-#削除予定
-#csvファイルへの書き込みを行う関数
-def export_result_csv(data: dict):
-  """
-  dataで受け取った計算結果をCSVファイル(output/output.csv)に追記する。
-  ファイルが存在しない場合は新規作成し、ヘッダー行も自動で出力する。
-  """
-  print("def export_result_csv 開始")
-  #outputディレクトリがなければ作成
-  os.makedirs("output", exist_ok=True)
-  #ファイル名を固定とする場合の処理
-  filename = "output/output.csv"
-
-  #新規書き込みw,追記モードaで使い分け
-  with open(filename, mode="a", newline="", encoding="utf-8") as f:
-    write = csv.DictWriter(f, fieldnames=data.keys())
-    #見出し行を付ける処理
-    if os.path.getsize(filename) == 0:
-      write.writeheader()
-    #現在ファイル名を固定としているため、csvのカラムを記述する処理はコメントアウト
-    #write.writeheader()
-    write.writerow(data)
-  print(f"CSV出力完了:{filename}")
-  return
-
-
-#csv書き込み関数(上書き用)
-# def save_csv(path, data: list[dict]):
-#     with open(path, mode="w", newline="", encoding="utf-8") as f:
-#         write = csv.DictWriter(f, fieldnames=data[0].keys())
-#         write.writeheader()
-#         write.writerow(data)
-#     print(f"CSV更新完了:{path}")
-#     return
-
-#削除予定
-#csvファイルの書き込み関数
-def save_csv(path, data):
-    print("def save_csv 開始")
-    print("書き込み内容: %s", data)
-    if not data:
-        #全権削除された場合は空ファイルにする
-        open(path, "w").close()
-        return
-    
-    with open(path, mode="w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=data[0].keys())
-        writer.writeheader()    #ヘッダーは必須
-        writer.writerows(data)  #←複数行を書き込む
-    print("CSV更新完了:%s", path)
-
-
-#新しく作るcsv書き込み関数
-def write_csv(f_mode, data,):
-    print("def write_csv 開始")
+#csv書き込み関数
+def write_csv(f_mode, data):
+    logger.info("def write_csv 開始")
 
     #outputディレクトリがなければ作成
     os.makedirs("output", exist_ok=True)
     filename = "output/output.csv"
-
-    #TODO
-    #all_deleteがあるから要らないかもだけど
-    #all_deleteもここでやるようにしたい
+    
     if not data:
         #全権削除された場合は空ファイルにする
         open(filename, "w").close()
         return
     
-  #新規書き込みw,追記モードaで使い分け
+    #新規書き込みw,追記モードaで使い分け
     with open(filename, mode=f_mode, newline="", encoding="utf-8") as f:
         write = csv.DictWriter(f, fieldnames=data.keys())
         #サイズが0なら見出し行を付ける処理
         if os.path.getsize(filename) == 0:
             write.writeheader()
         write.writerow(data)
-    print(f"CSV出力完了:{filename}")
+        #複数行を書き込む処理(forで1回ずつ書き込んでいるので使用しない)
+        #writer.writerows(data)
+    logger.info(f"CSV出力完了:{filename}")
     return
 
+
+#scvの書き込み制御(dataは1件、datasは複数件)
+def csv_write_control(data, datas):
+    count = 0
+    #データが1件だけなら追記(a)
+    if data:
+        write_csv("a",data)
+    else:
+        if not datas:
+            write_csv("w",None)
+        #データが複数件なら最初の1回だけ(w)
+        for r in datas:
+            if count == 0:
+                write_csv("w",r)
+                count+=1
+            else:
+                write_csv("a", r)
+    return
 
 #csvファイル読み込み関数
 def load_csv(filepath):
@@ -154,7 +121,7 @@ def judge_profit(profit):
     
 #入力値に対する処理をindexから分離し、importでも使えるようにした関数
 def input_exe(name, price, cost_price, shipping):
-    print("def input_exe 開始")
+    logger.info("def input_exe 開始")
     try:
         name = str(name)
         price = int(price)
@@ -165,7 +132,7 @@ def input_exe(name, price, cost_price, shipping):
         result = None
         error = None
 
-        print("入力受付: name=%s, price=%s, cost=%s, shipping=%s", name,price,cost_price,shipping)
+        logger.info("入力受付: name=%s, price=%s, cost=%s, shipping=%s", name,price,cost_price,shipping)
 
         #数値の正当性をチェック
         if price <= 0 or cost_price <= 0 or shipping <= 0:
@@ -174,16 +141,16 @@ def input_exe(name, price, cost_price, shipping):
             error = ERROR_TOO_LOW
 
         else:
-            print("入力値正常性確認完了")
+            logger.info("入力値正常性確認完了")
 
             #ここで計算処理
             profit  = int(calc_profit(price, cost_price, shipping, FEE_RATE))
-            print("profit = %s", profit)
+            logger.info("profit = %s", profit)
             profit_rate = int(profit / cost_price * 100) if cost_price > 0 else 0
-            print("profit_rate = %s", profit_rate)
+            logger.info("profit_rate = %s", profit_rate)
             #赤字判定を関数で行う
             judge, judge_class = judge_profit(profit)
-            print("計算完了 profit=%s, judge=%s", profit, judge)
+            logger.info("計算完了 profit=%s, judge=%s", profit, judge)
             result = {
                 "商品名": name,
                 "価格": price,
@@ -197,24 +164,24 @@ def input_exe(name, price, cost_price, shipping):
                 'ID': str(uuid.uuid4()),
             }
             #csvファイル書き込み
-            export_result_csv(result)
+            csv_write_control(result, None)
     except ValueError:
         error = ERROR_NOT_NUMBER
-        print("数値変換エラー")
+        logger.info("数値変換エラー")
  
     if error:
-        print("%s",error)
+        logger.info("%s",error)
 
     return result, error
 
 #ソート機能を独立
 def history_sort(records, sort_key, flag):
-    print("def history_sort 開始")
+    logger.info("def history_sort 開始")
     cast = SORT_CAST.get(sort_key, str)
-    print("%sソート実施", sort_key)
-    print("レコード件数(ソート前):%s件数", len(records))
+    logger.info("%sソート実施", sort_key)
+    logger.info("レコード件数(ソート前):%s件数", len(records))
     sort_records = sorted(records, key=lambda x: cast(x[sort_key]), reverse=flag)
-    print("レコード件数:%s件数", len(sort_records))
+    logger.info("レコード件数:%s件数", len(sort_records))
     #数値の場合、int変換する必要があるため、分岐処理
     # if sort_key in ("利益","価格","原価","送料","利益率"):
     #     sort_records = sorted(records, key=lambda x: int(x[sort_key]), reverse=flag)
@@ -224,11 +191,11 @@ def history_sort(records, sort_key, flag):
 
 #フィルター機能を独立
 def history_filter(records, filter_word,filter_key):
-    print("def history_filter 開始")
-    print("%sフィルター実施(key)", filter_key)
-    print("%sフィルター実施(word)", filter_word)
+    logger.info("def history_filter 開始")
+    logger.info("%sフィルター実施(key)", filter_key)
+    logger.info("%sフィルター実施(word)", filter_word)
 
-    print("レコード件数(フィルタ前):%s件数", len(records))
+    logger.info("レコード件数(フィルタ前):%s件数", len(records))
     filter_records = [ r for r in records if r[filter_word] == filter_key]
-    print("レコード件数(フィルタ後):%s件数", len(filter_records))
+    logger.info("レコード件数(フィルタ後):%s件数", len(filter_records))
     return filter_records

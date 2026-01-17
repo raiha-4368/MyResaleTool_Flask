@@ -49,12 +49,20 @@ body {
 /* classによるスタイルの適用 */
 /* 背景が薄グレーになり、白いカードが中央に出る */
 .container {
-  max-width: 600px;
+  max-width: 1000px;
   margin: 40px auto;
   padding: 30px;
   background: white;
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0,0,0,0.05)
+}
+
+.import-form {
+  margin-top: 20px;
+  padding: 15px;
+  border: 2px dashed #ccc;
+  border-radius: 6px;
+  background: #fafafa;
 }
 
 h1 {
@@ -72,7 +80,7 @@ label {
   margin-bottom: 5px;
 }
 
-input {
+input.single {
   width: 100%;
   padding: 8px;
   background: #4f465e;

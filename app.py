@@ -1,12 +1,48 @@
 import os
 import io
 import csv
-import uuid
 import logging
-import logic
 from logging.handlers import RotatingFileHandler
+
+#======================================
+# logging 設定
+#======================================
+
+# Logger 作成
+logger = logging.getLogger("resale_app")
+logger.setLevel(logging.INFO)
+
+# handler 作成
+log_handler = RotatingFileHandler(
+        "logs/app.log",
+        maxBytes = 1024 * 1024, # 1MBでローテーション
+        backupCount = 3,        # 古いログを3世代保持
+        encoding = "utf-8"
+    )
+
+# formatter
+log_formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(message)s"
+    )
+log_handler.setFormatter(log_formatter)
+
+# handler 登録(重複防止)
+if not logger.handlers:
+    logger.addHandler(log_handler)
+
+#hundlerを設定した場合、basicConfigは設定しない(重複する)
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+#     filename="logs/app.log",
+#     encoding="utf-8"
+# )
+
+import logic
 from datetime import datetime
 from flask import Flask, render_template, request,send_file, redirect, url_for 
+from flask import session
+
 
 ########################################################################
 #メルカリ出品前に利益と利益率を計算するツール
@@ -16,6 +52,9 @@ from flask import Flask, render_template, request,send_file, redirect, url_for
 ########################################################################
 
 app = Flask(__name__)
+
+#セッションでの情報保持用(必須)
+app.secret_key = "dev-secret-key"
 
 
 #エラーメッセージ定義
@@ -70,6 +109,11 @@ def index():
     result = None
     error = None
 
+    import_result = session.pop("import_result", None)
+    import_success = session.pop("import_success", False)
+    #今使えていないかもしれないerror
+    error = session.pop("import_error", None)
+
     if request.method == "POST":
         name = request.form.get("name")
         price = request.form.get("price")
@@ -83,7 +127,11 @@ def index():
             #入力値に対する処理を行う
             result,error = logic.input_exe(name, price, cost_price, shipping)
 
-    return render_template("index.html", result=result, error=error)
+    return render_template("index.html", 
+                            result=result,
+                            error=error,
+                            import_success=import_success,
+                            import_records=import_result,)
 
 @app.route("/history")
 def history():
@@ -144,33 +192,16 @@ def delete():
     logger.info("CSV削除: target_date= %s", target_id)
     records = logic.load_csv("output/output.csv") 
 
-    #削除対象以外だけを出す
-    #以下、省略していない書き方の認識
-    # for r in records:
-    #     print("確認用")
-    #     print("csv date:", repr(r["日時"]))
-    #     if r["日時"] == target_date:
-    #          print("確認2")
-    #          print("ターゲット:",target_date)
-    #          print("csvデータ：",r["日時"])
-    #          print("一致している！！1回だけの想定")
-    #     else:
-    #         print("一致していない！これだけを格納想定")
-    #         print("ターゲット:",target_date)
-    #         print("csvデータ：",r["日時"])
-
     new_records = [r for r in records if r["ID"] != target_id]
-    # print("======削除後のデータ確認======")
-    # print(new_records)
-    # print("======削除後のデータ確認終了======")
-    logger.info("CSV削除: 件数=%s", len(new_records))
+    logger.info("CSV削除後: 件数=%s", len(new_records))
 
-
-    logic.save_csv("output/output.csv" ,new_records)
+    #csv書き込み
+    logic.csv_write_control(None, new_records)
 
     #redirect(url_for("history"))は
     #今の関数で画面を描かない、もとのURLに戻して再読み込みの意味がある
-    return redirect(url_for("history"))
+    #request.referrerでソートやフィルターの状態を持ちこしてhistoryに戻る
+    return redirect(request.referrer or url_for("history"))
 
 @app.route("/download")
 def download_csv():
@@ -223,54 +254,29 @@ def import_csv():
         
         logger.info("CSV import finished: %s rows", count)
 
-    return render_template("index.html", import_success=True, imported_records=results, error=error)
+    session["import_result"] = results
+    session["import_success"] = True
+    session["import errror"] = error
 
+#    render_template("index.html", import_success=True, imported_records=results, error=error)
+    return redirect(url_for("index"))
 #↓これは一番最後に書いて無きゃいけなさそう
 if __name__ == "__main__":
-    test_judge()  # 確認したいときだけ有効化
-    #======================================
-    # logging 設定
-    #======================================
+    #test_judge()  # 確認したいときだけ有効化
     os.makedirs("logs", exist_ok=True)
-
-    log_handler = RotatingFileHandler(
-        "logs/app.log",
-        maxBytes = 1024 * 1024, # 1MBでローテーション
-        backupCount = 3,        # 古いログを3世代保持
-        encoding = "utf-8"
-    )
-    log_formatter = logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(message)s"
-    )
-    log_handler.setFormatter(log_formatter)
-
-    logger = logging.getLogger("resale_app")
-    logger.setLevel(logging.INFO)
-    logger.addHandler(log_handler)
 
     app.run(debug=True)
 
 #TODO:
-# 改修案
-# ①csvファイルのインポート処理
-#   ∟計算対象の一括インポート処理
-#   ∟実務を考えるならあった方が良さそうな機能
-#   ∟難易度が高い?みたいな認識
-
 # 継続課題
-# docstring(プログラムの解説)の記述をする
-# ∟一応済?もう少しかけることはあるかもしれないけど、コメントだらけで現状でもコメントだらけで見にくいんじゃ?という気もしている
-# 見た目の軽い整形(htmlやcssの理解を深める事)
-#  ∟継続的な課題。htmlやcssの記述と構造の把握をしていきたい。
+# docstring(プログラムの解説)やコメントの記述をする
+# ∟見直し＆追記を行う
 
-
-# 出来るのか不明なこと
+# 今後の課題(当アプリでの実装は考えていないこと)
 # DB実装
-#     ∟現状のcsv管理とは根本から変えなくてはならない認識
-#      やる場合はプログラムを分けたい
-# 動的な表の実装
-#     ∟履歴のページリロード(URLの遷移)ではなく、そのページの状態でフィルタ、ソートができる機能を付ける
-#      Javascriptとかphpを駆使することになるのでしょうか、ちょっとわからない
+#     ∟flaskとの共存を考える
+# 動的なページの実装
+#     ∟Javascriptとかphpを駆使すること
 
 
 
