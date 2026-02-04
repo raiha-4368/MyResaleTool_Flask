@@ -119,10 +119,14 @@ def index():
         price = request.form.get("price")
         cost_price = request.form.get("cost_price")
         shipping = request.form.get("shipping")
-        #空欄チェック
-        if not name or not price or not cost_price or not shipping:
+        #必須項目の空欄チェック
+        if not name or not cost_price or not shipping:
             error = ERROR_REQUIRED
             logger.warning("未入力エラー")
+        elif not price and cost_price:
+            logger.info("売値設定がない状態で原価入力された場合、いくら足せば利益が出るのか計算する")
+            result,error = logic.input_exe(name, 0, cost_price, shipping)
+
         else:
             #入力値に対する処理を行う
             result,error = logic.input_exe(name, price, cost_price, shipping)

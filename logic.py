@@ -118,7 +118,19 @@ def judge_profit(profit):
         return "利益が少なめです。(要塞検討)", "yellow"
     else:
         return "出品候補です", "green"
-    
+
+#数値の正当性をチェック
+def input_check(name, price, cost_price, shipping):
+    #数値の正当性をチェック
+    error = None
+    #priceが0の場合、みなし値を入れて処理を継続する形に変更。マイナスの値の場合エラーとするようにする
+    if price < 0 or cost_price <= 0 or shipping <= 0:
+        error = ERROR_POSITYVE
+    # priceが0ではなく、価格が原価と送料を下回った場合エラーとする
+    elif price != 0 and price < cost_price + shipping:
+        error = ERROR_TOO_LOW
+    return error
+
 #入力値に対する処理をindexから分離し、importでも使えるようにした関数
 def input_exe(name, price, cost_price, shipping):
     logger.info("def input_exe 開始")
@@ -130,39 +142,29 @@ def input_exe(name, price, cost_price, shipping):
         judge = None
         judge_class = None
         result = None
-        error = None
 
         logger.info("入力受付: name=%s, price=%s, cost=%s, shipping=%s", name,price,cost_price,shipping)
 
-        #数値の正当性をチェック
-        if price <= 0 or cost_price <= 0 or shipping <= 0:
-            error = ERROR_POSITYVE
-        elif price < cost_price + shipping:
-            error = ERROR_TOO_LOW
+        # 入力値チェック
+        error = input_check(name, price, cost_price, shipping)
 
-        else:
+        #この時点でerrorがなければ処理を続行
+        if not error:
             logger.info("入力値正常性確認完了")
 
             #ここで計算処理
-            profit  = int(calc_profit(price, cost_price, shipping, FEE_RATE))
+            #priceが0だった場合見なし値で計算をして300円以上の利益が出るように価格を調整
+            if price == 0:
+                price, profit = price_prediction(name, cost_price, shipping, 300)
+            else:
+                profit  = int(calc_profit(price, cost_price, shipping, FEE_RATE))
+            
             logger.info("profit = %s", profit)
             profit_rate = int(profit / cost_price * 100) if cost_price > 0 else 0
             logger.info("profit_rate = %s", profit_rate)
-            #赤字判定を関数で行う
-            judge, judge_class = judge_profit(profit)
-            logger.info("計算完了 profit=%s, judge=%s", profit, judge)
-            result = {
-                "商品名": name,
-                "価格": price,
-                "原価": cost_price,
-                "送料": shipping,
-                "利益": profit,
-                "利益率": profit_rate,
-                "判定": judge,
-                "判定カラー": judge_class,
-                "日時": datetime.now().strftime("%Y-%m-%d_%H:%M:%S"),
-                'ID': str(uuid.uuid4()),
-            }
+
+            # resultを作成することを関数で実装
+            result = result_collect(name, price, cost_price, shipping, profit, profit_rate)
             #csvファイル書き込み
             csv_write_control(result, None)
     except ValueError:
@@ -173,6 +175,42 @@ def input_exe(name, price, cost_price, shipping):
         logger.info("%s",error)
 
     return result, error
+
+# 価格をみなし値で行う関数
+def price_prediction(name, cost_price, shipping, desired_profit):
+    logger.info("def price_prediction 開始")
+
+    #ここで計算処理
+    #みなしで売値を入れていく(+100から) 無限ループさせる予定(利益が出たらブレイク)
+    # 0から始める必要はないため、原価と売値を一致させておく
+    price = cost_price
+    while True:
+        profit  = int(calc_profit(price, cost_price, shipping, FEE_RATE))
+        #利益がdesired_profitを超えたらbreak
+        if profit > desired_profit:
+            break
+        price = price + 100
+
+    return price, profit
+
+# htmlへ渡すresultの生成
+def result_collect(name, price, cost_price, shipping, profit, profit_rate):
+    #赤字判定を関数で行う
+    judge, judge_class = judge_profit(profit)
+    logger.info("計算完了 profit=%s, judge=%s", profit, judge)
+    result = {
+        "商品名": name,
+        "価格": price,
+        "原価": cost_price,
+        "送料": shipping,
+        "利益": profit,
+        "利益率": profit_rate,
+        "判定": judge,
+        "判定カラー": judge_class,
+        "日時": datetime.now().strftime("%Y-%m-%d_%H:%M:%S"),
+        'ID': str(uuid.uuid4()),
+    }
+    return result
 
 #ソート機能を独立
 def history_sort(records, sort_key, flag):
