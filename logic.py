@@ -139,8 +139,6 @@ def input_exe(name, price, cost_price, shipping):
         price = int(price)
         cost_price = int(cost_price)
         shipping = int(shipping)
-        judge = None
-        judge_class = None
         result = None
 
         logger.info("入力受付: name=%s, price=%s, cost=%s, shipping=%s", name,price,cost_price,shipping)

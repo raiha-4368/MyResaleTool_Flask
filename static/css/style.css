@@ -117,6 +117,12 @@ input.single {
 }
 
 
+/* すべての入力欄のプレースホルダーの色を変える */
+input::placeholder {
+  color: #ccc;
+  font-size: 0.9em;
+}
+
 /* idによるスタイルの適用 */
 #name {
   /* テスト用なのでコメントアウト */
